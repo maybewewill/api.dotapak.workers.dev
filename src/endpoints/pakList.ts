@@ -8,7 +8,7 @@ export class PakList extends OpenAPIRoute {
 		summary: "List all Paks",
 		request: {
 			query: z.object({
-				page: z.coerce.number().catch(0).describe("Page number"),
+				page: z.coerce.number().default(0).describe("Page number"),
 				creator: z.string().optional().describe("Filter by creator"),
 				creator_url: z.string().optional().describe("Filter by creator_url"),
 			}),
@@ -35,7 +35,8 @@ export class PakList extends OpenAPIRoute {
 
 	async handle(c: AppContext) {
 		const data = await this.getValidatedData<typeof this.schema>();
-		const { page, creator, creator_url } = data.query;
+		const { creator, creator_url } = data.query;
+		const page = isNaN(data.query.page) ? 0 : data.query.page;
 		const pageSize = 50;
 		const offset = page * pageSize;
 

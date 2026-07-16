@@ -16,16 +16,12 @@ const PakHeroForHash = z.object({
 	),
 }).passthrough();
 
-/** Input accepts any JSON, but must include `data.heroes` for hash-based dedup.
- * Max payload ~900KB to stay safely under D1's ~1MB parameter limit. */
+/** Input accepts any JSON, but must include `data.heroes` for hash-based dedup. */
 export const PakCreateInput = z.object({
 	data: z.object({
 		heroes: z.array(PakHeroForHash).min(1, "At least one hero required"),
 	}).passthrough(),
-}).passthrough().refine(
-	(val) => JSON.stringify(val).length < 900_000,
-	{ message: "Payload too large (max ~900KB)" },
-);
+}).passthrough();
 
 /** Row shape returned from D1 */
 export interface PakRow {

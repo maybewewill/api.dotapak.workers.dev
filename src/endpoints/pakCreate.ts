@@ -49,6 +49,12 @@ export class PakCreate extends OpenAPIRoute {
 	async handle(c: AppContext) {
 		const data = await this.getValidatedData<typeof this.schema>();
 		const input = data.body;
+
+		// Reject oversized payloads before hitting D1's ~1MB bind limit
+		if (JSON.stringify(input).length >= 900_000) {
+			return c.json({ success: false, error: "Payload too large (max ~900KB)" }, 413);
+		}
+
 		const hash = await generatePakHash(input);
 
 		// Insert with hash check (atomic — avoids race condition on duplicate)
