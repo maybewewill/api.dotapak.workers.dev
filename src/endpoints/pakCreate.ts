@@ -73,9 +73,9 @@ export class PakCreate extends OpenAPIRoute {
 			{
 				success: true,
 				pak: {
+					...input,
 					hash,
 					downloads: 0,
-					...input,
 				},
 			},
 			201,

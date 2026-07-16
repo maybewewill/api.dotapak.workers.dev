@@ -113,9 +113,10 @@ export class PakDownload extends OpenAPIRoute {
 			.run();
 
 		// Prune old rate-limit entries (keep only last 60s)
-		c.env.DB.prepare(
-			"DELETE FROM download_log WHERE requested_at < ?",
-		).bind(now - 60).run().catch(() => {});
+		c.executionCtx.waitUntil(
+			c.env.DB.prepare("DELETE FROM download_log WHERE requested_at < ?")
+				.bind(now - 60).run().catch(() => {}),
+		);
 
 		return {
 			success: true,
