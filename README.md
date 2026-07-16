@@ -1,25 +1,25 @@
-# Cloudflare Workers OpenAPI 3.1
+# dotapak API
 
-This is a Cloudflare Worker with OpenAPI 3.1 using [chanfana](https://github.com/cloudflare/chanfana) and [Hono](https://github.com/honojs/hono).
+Flexible JSON storage API for pak files. Built on Cloudflare Workers + D1.
 
-This is an example project made to be used as a quick start into building OpenAPI compliant Workers that generates the
-`openapi.json` schema automatically from code and validates the incoming request to the defined parameters or request body.
+## Endpoints
 
-## Get started
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/paks` | Create a pak. Accepts arbitrary JSON. Returns `{ hash, hash, downloads, ...data }`. |
+| GET | `/api/paks` | List paks (paginated, 50/page). Optional filters: `?creator=`, `?creator_url=`. |
+| GET | `/api/paks/:hash` | Fetch a single pak by hash. |
+| POST | `/api/paks/:hash/download` | Increment download counter. Rate limited to once per 15s per IP. |
 
-1. Sign up for [Cloudflare Workers](https://workers.dev). The free tier is more than enough for most use cases.
-2. Clone this project and install dependencies with `npm install`
-3. Run `wrangler login` to login to your Cloudflare account in wrangler
-4. Run `wrangler deploy` to publish the API to Cloudflare Workers
+## Hash
 
-## Project structure
+Pak identity is a SHA-256 hash of the entire JSON content (normalized — keys sorted, arrays sorted). Duplicate content returns the same hash (409 on second POST).
 
-1. Your main router is defined in `src/index.ts`.
-2. Each endpoint has its own file in `src/endpoints/`.
-3. For more information read the [chanfana documentation](https://chanfana.pages.dev/) and [Hono documentation](https://hono.dev/docs).
+## Deploy
 
-## Development
+```bash
+npm install
+npx wrangler deploy
+```
 
-1. Run `wrangler dev` to start a local instance of the API.
-2. Open `http://localhost:8787/` in your browser to see the Swagger interface where you can try the endpoints.
-3. Changes made in the `src/` folder will automatically trigger the server to reload, you only need to refresh the Swagger interface.
+Requires a D1 database named `api-db` and a rate limiter namespace. See `wrangler.jsonc` for bindings.
