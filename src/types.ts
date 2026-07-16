@@ -38,14 +38,28 @@ export interface FileRow {
 }
 
 /**
- * Look up file metadata from D1 and return a file object or null.
+ * Look up file metadata — try KV first, fall back to D1.
  */
-export async function getFileInfo(db: D1Database, fileHash: string) {
+export async function getFileInfo(db: D1Database, kv: KVNamespace, fileHash: string) {
+	// KV fast path
+	const cached = await kv.get<{ file_name: string; file_size: number; mime_type: string } | null>(`file:${fileHash}`, "json");
+	if (cached) {
+		return { hash: fileHash, ...cached };
+	}
+
+	// D1 fallback
 	const file = await db.prepare(
 		"SELECT hash, file_name, file_size, mime_type FROM files WHERE hash = ?",
 	).bind(fileHash).first<FileRow>();
 
 	if (!file) return null;
+
+	// Seed KV for next time
+	kv.put(`file:${fileHash}`, JSON.stringify({
+		file_name: file.file_name,
+		file_size: file.file_size,
+		mime_type: file.mime_type,
+	})).catch(() => {});
 
 	return {
 		hash: file.hash,

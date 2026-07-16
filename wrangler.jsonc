@@ -14,6 +14,18 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"r2_buckets": [
+		{
+			"binding": "FILES_BUCKET",
+			"bucket_name": "dotapak-files"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "FILE_META",
+			"id": "ea5adeb0c2494bafae38e39c45bb2705"
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -32,6 +44,6 @@
 		},
 	],
 	"vars": {
-		"TELEGRAM_CHAT_ID": ""
+		"TELEGRAM_CHAT_ID": "8357933682"
 	}
 }

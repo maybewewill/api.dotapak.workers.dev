@@ -135,17 +135,50 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 			.bind(now - 60).run().catch(() => {}),
 	);
 
-	// ── If a file is attached, proxy it from Telegram ──
+	// ── If a file is attached, serve from R2 with edge cache ──
 	if (row.file_hash) {
+		// Check edge cache (hash-keyed files are immutable)
+		const cacheUrl = `https://cdn/${row.file_hash}`;
+		const cacheKey = new Request(cacheUrl);
+		const cachedResponse = await caches.default.match(cacheKey);
+		if (cachedResponse) return cachedResponse;
+
+		// Read from R2
+		const obj = await c.env.FILES_BUCKET.get(row.file_hash);
+		if (obj) {
+			// Metadata from KV (fast) or D1 (fallback)
+			const fileInfo = await getFileInfo(c.env.DB, c.env.FILE_META, row.file_hash);
+
+			const responseHeaders = new Headers();
+			responseHeaders.set(
+				"Content-Disposition",
+				`attachment; filename="${fileInfo?.file_name || "download"}"`,
+			);
+			responseHeaders.set("Content-Type", fileInfo?.mime_type || "application/octet-stream");
+			responseHeaders.set("Cache-Control", "public, max-age=31536000, immutable");
+			responseHeaders.set("X-Pak-Hash", hash);
+			responseHeaders.set("X-Pak-Downloads", String(row.downloads + 1));
+
+			const response = new Response(obj.body, {
+				status: 200,
+				headers: responseHeaders,
+			});
+
+			// Cache at edge for instant repeat downloads
+			c.executionCtx.waitUntil(caches.default.put(cacheKey, response.clone()));
+
+			return response;
+		}
+
+		// Fallback: file_hash set but not in R2 — try Telegram proxy (legacy)
 		const fileRow = await c.env.DB.prepare(
 			"SELECT telegram_file_id, file_name, mime_type FROM files WHERE hash = ?",
 		).bind(row.file_hash).first<{ telegram_file_id: string; file_name: string; mime_type: string }>();
 
-		if (fileRow) {
+		if (fileRow?.telegram_file_id) {
 			try {
 				const botToken = (c.env as any).BOT_TOKEN as string;
 
-				// Get download path from Telegram API
 				const fileRes = await fetch(
 					`${TG_API}/bot${botToken}/getFile?file_id=${fileRow.telegram_file_id}`,
 				);
@@ -155,12 +188,10 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 					return c.json({ success: false, error: "File unavailable on Telegram" }, 502);
 				}
 
-				// Stream the file from Telegram through us
 				const tgResponse = await fetch(
 					`${TG_API}/file/bot${botToken}/${fileData.result.file_path}`,
 				);
 
-				// Forward with correct headers for download
 				const responseHeaders = new Headers(tgResponse.headers);
 				responseHeaders.set(
 					"Content-Disposition",
@@ -178,7 +209,7 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 				return c.json({ success: false, error: "Failed to proxy file" }, 502);
 			}
 		}
-		// file_hash set but no files row — fall through to JSON
+		// file_hash set but no file anywhere — fall through to JSON
 	}
 
 	// ── No file attached → return JSON ──
@@ -190,7 +221,7 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 	};
 
 	if (row.file_hash) {
-		const fileInfo = await getFileInfo(c.env.DB, row.file_hash);
+		const fileInfo = await getFileInfo(c.env.DB, c.env.FILE_META, row.file_hash);
 		if (fileInfo) pak.file = fileInfo;
 	}
 

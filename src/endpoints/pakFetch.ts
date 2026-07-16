@@ -49,7 +49,7 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 
 	// Include file info if attached
 	if (row.file_hash) {
-		const fileInfo = await getFileInfo(c.env.DB, row.file_hash);
+		const fileInfo = await getFileInfo(c.env.DB, c.env.FILE_META, row.file_hash);
 		if (fileInfo) pak.file = fileInfo;
 	}
 

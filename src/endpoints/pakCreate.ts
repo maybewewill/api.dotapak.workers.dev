@@ -100,7 +100,7 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 	const { file_hash: _, ...restInput } = input;
 	const pak: Record<string, unknown> = { ...restInput, hash, downloads: 0 };
 	if (fileHash) {
-		const fileInfo = await getFileInfo(c.env.DB, fileHash);
+		const fileInfo = await getFileInfo(c.env.DB, c.env.FILE_META, fileHash);
 		if (fileInfo) pak.file = fileInfo;
 	}
 
