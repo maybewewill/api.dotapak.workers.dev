@@ -23,3 +23,7 @@ npx wrangler deploy
 ```
 
 Requires a D1 database named `api-db` and a rate limiter namespace. See `wrangler.jsonc` for bindings.
+
+## License
+
+MIT
