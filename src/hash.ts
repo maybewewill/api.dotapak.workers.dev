@@ -40,7 +40,8 @@ export async function generatePakHash(data: unknown): Promise<string> {
 	const hashArray = Array.from(new Uint8Array(hashBuffer));
 	return hashArray
 		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
+		.join("")
+		.slice(0, 32);
 }
 
 /**
@@ -54,5 +55,6 @@ export async function hashIP(ip: string): Promise<string> {
 	const hashArray = Array.from(new Uint8Array(hashBuffer));
 	return hashArray
 		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
+		.join("")
+		.slice(0, 32);
 }
