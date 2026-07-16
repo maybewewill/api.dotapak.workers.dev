@@ -4,6 +4,7 @@ import { PakCreate } from "./endpoints/pakCreate";
 import { PakList } from "./endpoints/pakList";
 import { PakFetch } from "./endpoints/pakFetch";
 import { PakDownload } from "./endpoints/pakDownload";
+import { handleTelegramWebhook } from "./telegram";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -22,6 +23,13 @@ app.use("/api/*", async (c, next) => {
 app.onError((err, c) => {
 	console.error(err);
 	return c.json({ success: false, error: "Internal server error" }, 500);
+});
+
+// ── Telegram bot webhook ──
+app.post("/webhook/telegram", async (c) => {
+	const update = await c.req.json();
+	c.executionCtx.waitUntil(handleTelegramWebhook(update, c.env as any));
+	return c.text("OK");
 });
 
 const openapi = fromHono(app, { docs_url: "/" });

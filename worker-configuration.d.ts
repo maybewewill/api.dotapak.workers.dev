@@ -4,6 +4,7 @@
 interface __BaseEnv_Env {
 	DB: D1Database;
 	API_RATE_LIMITER: RateLimit;
+	BOT_TOKEN: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

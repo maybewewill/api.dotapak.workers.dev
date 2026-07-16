@@ -30,6 +30,18 @@ function sortValue(value: unknown): unknown {
  * Normalises (sorts keys/elements) so equivalent content
  * produces the same hash regardless of field/array ordering.
  */
+function hexDigest(hashBuffer: ArrayBuffer): string {
+	return Array.from(new Uint8Array(hashBuffer))
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("")
+		.slice(0, 32);
+}
+
+/**
+ * Generate a deterministic hash from any data object.
+ * Normalises (sorts keys/elements) so equivalent content
+ * produces the same hash regardless of field/array ordering.
+ */
 export async function generatePakHash(data: unknown): Promise<string> {
 	const normalized = sortValue(data);
 	const input = JSON.stringify(normalized);
@@ -37,11 +49,15 @@ export async function generatePakHash(data: unknown): Promise<string> {
 		"SHA-256",
 		new TextEncoder().encode(input),
 	);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("")
-		.slice(0, 32);
+	return hexDigest(hashBuffer);
+}
+
+/**
+ * Hash binary bytes (e.g. a downloaded file) for content dedup.
+ */
+export async function hashBytes(data: ArrayBuffer): Promise<string> {
+	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+	return hexDigest(hashBuffer);
 }
 
 /**
@@ -52,9 +68,5 @@ export async function hashIP(ip: string): Promise<string> {
 		"SHA-256",
 		new TextEncoder().encode(ip),
 	);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("")
-		.slice(0, 32);
+	return hexDigest(hashBuffer);
 }
