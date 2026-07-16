@@ -1,7 +1,4 @@
-import type { Context } from "hono";
 import { z } from "zod";
-
-export type AppContext = Context<{ Bindings: Env }>;
 
 // ── Paks (flexible schema) ──
 
@@ -28,6 +25,34 @@ export interface PakRow {
 	hash: string;
 	data: string;
 	downloads: number;
+	file_hash?: string;
+}
+
+/** Row shape from files table */
+export interface FileRow {
+	hash: string;
+	telegram_file_id: string;
+	file_name: string;
+	mime_type: string;
+	file_size: number;
+}
+
+/**
+ * Look up file metadata from D1 and return a file object or null.
+ */
+export async function getFileInfo(db: D1Database, fileHash: string) {
+	const file = await db.prepare(
+		"SELECT hash, file_name, file_size, mime_type FROM files WHERE hash = ?",
+	).bind(fileHash).first<FileRow>();
+
+	if (!file) return null;
+
+	return {
+		hash: file.hash,
+		file_name: file.file_name,
+		file_size: file.file_size,
+		mime_type: file.mime_type,
+	};
 }
 
 /** Response pak — hash + downloads + all user data spread at top level */
