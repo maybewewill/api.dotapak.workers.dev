@@ -19,8 +19,7 @@ app.use(async (c, next) => {
 	await next();
 });
 
-// Setup OpenAPI registry (no docs page)
-const openapi = fromHono(app, { docs_url: false });
+const openapi = fromHono(app, { docs_url: "/" });
 
 // ── Paks ──
 openapi.post("/api/paks", PakCreate);
