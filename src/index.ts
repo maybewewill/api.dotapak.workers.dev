@@ -9,6 +9,7 @@ import { route as pakFetchRoute, handler as pakFetchHandler } from "./endpoints/
 import { route as pakDownloadRoute, handler as pakDownloadHandler } from "./endpoints/pakDownload";
 import { route as pakAttachFileRoute, handler as pakAttachFileHandler } from "./endpoints/pakAttachFile";
 import { route as pakByFileRoute, handler as pakByFileHandler } from "./endpoints/pakByFile";
+import { route as pakUploadRoute, handler as pakUploadHandler } from "./endpoints/pakUpload";
 
 const app = new OpenAPIHono<{ Bindings: Env }>();
 
@@ -46,6 +47,7 @@ app.openapi(pakFetchRoute, pakFetchHandler as any);
 app.openapi(pakDownloadRoute, pakDownloadHandler as any);
 app.openapi(pakAttachFileRoute, pakAttachFileHandler as any);
 app.openapi(pakByFileRoute, pakByFileHandler as any);
+app.openapi(pakUploadRoute, pakUploadHandler as any);
 
 // ── OpenAPI documentation ──
 app.doc("/openapi.json", {

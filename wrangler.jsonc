@@ -30,5 +30,8 @@
 				"period": 60
 			}
 		},
-	]
+	],
+	"vars": {
+		"TELEGRAM_CHAT_ID": ""
+	}
 }
