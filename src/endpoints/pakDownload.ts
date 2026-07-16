@@ -11,7 +11,7 @@ export class PakDownload extends OpenAPIRoute {
 		summary: "Increment download count for a Pak",
 		request: {
 			params: z.object({
-				hash: z.string().describe("Pak hash"),
+				hash: z.string().regex(/^[a-f0-9]{32}$/).describe("Pak hash (32 hex chars)"),
 			}),
 		},
 		responses: {

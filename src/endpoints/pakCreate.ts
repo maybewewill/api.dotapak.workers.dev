@@ -49,9 +49,10 @@ export class PakCreate extends OpenAPIRoute {
 	async handle(c: AppContext) {
 		const data = await this.getValidatedData<typeof this.schema>();
 		const input = data.body;
+		const payload = JSON.stringify(input);
 
 		// Reject oversized payloads before hitting D1's ~1MB bind limit
-		if (JSON.stringify(input).length >= 900_000) {
+		if (payload.length >= 900_000) {
 			return c.json({ success: false, error: "Payload too large (max ~900KB)" }, 413);
 		}
 
@@ -61,7 +62,7 @@ export class PakCreate extends OpenAPIRoute {
 		const result = await c.env.DB.prepare(
 			"INSERT OR IGNORE INTO paks (hash, data) VALUES (?, ?)",
 		)
-			.bind(hash, JSON.stringify(input))
+			.bind(hash, payload)
 			.run();
 
 		if (result.meta.changes === 0) {

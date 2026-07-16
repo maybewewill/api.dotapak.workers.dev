@@ -7,8 +7,8 @@ import { PakDownload } from "./endpoints/pakDownload";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Global rate limiting — 100 requests per 60 seconds per path
-app.use(async (c, next) => {
+// Global rate limiting — 100 requests per 60 seconds per path (API only)
+app.use("/api/*", async (c, next) => {
 	const limiter = c.env.API_RATE_LIMITER as RateLimit;
 	const { success } = await limiter.limit({ key: c.req.path + ":" + (c.req.header("cf-connecting-ip") ?? "unknown") });
 
