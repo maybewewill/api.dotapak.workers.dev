@@ -1,4 +1,4 @@
-import { NotFoundException, OpenAPIRoute } from "chanfana";
+import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { type AppContext, parsePak } from "../types";
 
@@ -40,7 +40,7 @@ export class PakFetch extends OpenAPIRoute {
 			.first<{ hash: string; data: string; downloads: number }>();
 
 		if (!row) {
-			throw new NotFoundException();
+			return c.json({ success: false, error: "Not found" }, 404);
 		}
 
 		return {

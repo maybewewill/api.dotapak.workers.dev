@@ -32,10 +32,15 @@ export interface PakRow {
 
 /** Response pak — hash + downloads + all user data spread at top level */
 export function parsePak(row: PakRow) {
-	const data = JSON.parse(row.data);
+	let data: unknown;
+	try {
+		data = JSON.parse(row.data);
+	} catch {
+		throw new Error("Corrupted pak data for hash: " + row.hash);
+	}
 	return {
 		hash: row.hash,
 		downloads: row.downloads,
-		...data,
+		...(typeof data === "object" && data !== null ? (data as Record<string, unknown>) : {}),
 	};
 }

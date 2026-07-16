@@ -49,17 +49,16 @@ export class PakCreate extends OpenAPIRoute {
 	async handle(c: AppContext) {
 		const data = await this.getValidatedData<typeof this.schema>();
 		const input = data.body;
+		const hash = await generatePakHash(input);
 
-		const hash = await generatePakHash(input.data);
-
-		// Check if hash already exists
-		const existing = await c.env.DB.prepare(
-			"SELECT hash FROM paks WHERE hash = ?",
+		// Insert with hash check (atomic — avoids race condition on duplicate)
+		const result = await c.env.DB.prepare(
+			"INSERT OR IGNORE INTO paks (hash, data) VALUES (?, ?)",
 		)
-			.bind(hash)
-			.first<{ hash: string }>();
+			.bind(hash, JSON.stringify(input))
+			.run();
 
-		if (existing) {
+		if (result.meta.changes === 0) {
 			return c.json(
 				{
 					success: false,
@@ -69,13 +68,6 @@ export class PakCreate extends OpenAPIRoute {
 				409,
 			);
 		}
-
-		// Store the full input JSON as `data`
-		await c.env.DB.prepare(
-			"INSERT INTO paks (hash, data) VALUES (?, ?)",
-		)
-			.bind(hash, JSON.stringify(input))
-			.run();
 
 		return c.json(
 			{

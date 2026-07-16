@@ -1,4 +1,4 @@
-import { NotFoundException, OpenAPIRoute } from "chanfana";
+import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { type AppContext, parsePak } from "../types";
 import { hashIP } from "../hash";
@@ -25,6 +25,17 @@ export class PakDownload extends OpenAPIRoute {
 								hash: z.string(),
 								downloads: z.number().int(),
 							}).passthrough(),
+						}),
+					},
+				},
+			},
+			"404": {
+				description: "Pak not found",
+				content: {
+					"application/json": {
+						schema: z.object({
+							success: z.boolean(),
+							error: z.string(),
 						}),
 					},
 				},
@@ -56,11 +67,14 @@ export class PakDownload extends OpenAPIRoute {
 			.first<{ hash: string; data: string; downloads: number }>();
 
 		if (!row) {
-			throw new NotFoundException();
+			return c.json({ success: false, error: "Not found" }, 404);
 		}
 
 		// ── Per-IP rate limiting via D1 ──
-		const ip = c.req.header("cf-connecting-ip") ?? "unknown";
+		const ip = c.req.header("cf-connecting-ip");
+		if (!ip) {
+			return c.json({ success: false, error: "Could not determine client IP" }, 400);
+		}
 		const ipHash = await hashIP(ip);
 		const now = Math.floor(Date.now() / 1000);
 
@@ -97,6 +111,11 @@ export class PakDownload extends OpenAPIRoute {
 		)
 			.bind(hash)
 			.run();
+
+		// Prune old rate-limit entries (keep only last 60s)
+		c.env.DB.prepare(
+			"DELETE FROM download_log WHERE requested_at < ?",
+		).bind(now - 60).run().catch(() => {});
 
 		return {
 			success: true,

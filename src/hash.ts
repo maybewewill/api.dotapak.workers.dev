@@ -22,7 +22,7 @@ function sortValue(value: unknown): unknown {
 		}
 		return result;
 	}
-	return value;
+	return typeof value === "string" ? value.normalize("NFC") : value;
 }
 
 /**
@@ -40,8 +40,7 @@ export async function generatePakHash(data: unknown): Promise<string> {
 	const hashArray = Array.from(new Uint8Array(hashBuffer));
 	return hashArray
 		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("")
-		.slice(0, 16);
+		.join("");
 }
 
 /**
@@ -55,6 +54,5 @@ export async function hashIP(ip: string): Promise<string> {
 	const hashArray = Array.from(new Uint8Array(hashBuffer));
 	return hashArray
 		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("")
-		.slice(0, 16);
+		.join("");
 }

@@ -8,7 +8,7 @@ export class PakList extends OpenAPIRoute {
 		summary: "List all Paks",
 		request: {
 			query: z.object({
-				page: z.coerce.number().default(0).describe("Page number"),
+				page: z.coerce.number().catch(0).describe("Page number"),
 				creator: z.string().optional().describe("Filter by creator"),
 				creator_url: z.string().optional().describe("Filter by creator_url"),
 			}),

@@ -10,13 +10,18 @@ const app = new Hono<{ Bindings: Env }>();
 // Global rate limiting — 100 requests per 60 seconds per path
 app.use(async (c, next) => {
 	const limiter = c.env.API_RATE_LIMITER as RateLimit;
-	const { success } = await limiter.limit({ key: c.req.path });
+	const { success } = await limiter.limit({ key: c.req.path + ":" + (c.req.header("cf-connecting-ip") ?? "unknown") });
 
 	if (!success) {
 		return c.json({ success: false, error: "Too many requests" }, 429);
 	}
 
 	await next();
+});
+
+app.onError((err, c) => {
+	console.error(err);
+	return c.json({ success: false, error: "Internal server error" }, 500);
 });
 
 const openapi = fromHono(app, { docs_url: "/" });
