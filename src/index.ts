@@ -40,12 +40,12 @@ app.post("/webhook/telegram", async (c) => {
 });
 
 // ── OpenAPI routes ──
-app.openapi(pakCreateRoute, pakCreateHandler);
-app.openapi(pakListRoute, pakListHandler);
-app.openapi(pakFetchRoute, pakFetchHandler);
-app.openapi(pakDownloadRoute, pakDownloadHandler);
-app.openapi(pakAttachFileRoute, pakAttachFileHandler);
-app.openapi(pakByFileRoute, pakByFileHandler);
+app.openapi(pakCreateRoute, pakCreateHandler as any);
+app.openapi(pakListRoute, pakListHandler as any);
+app.openapi(pakFetchRoute, pakFetchHandler as any);
+app.openapi(pakDownloadRoute, pakDownloadHandler as any);
+app.openapi(pakAttachFileRoute, pakAttachFileHandler as any);
+app.openapi(pakByFileRoute, pakByFileHandler as any);
 
 // ── OpenAPI documentation ──
 app.doc("/openapi.json", {

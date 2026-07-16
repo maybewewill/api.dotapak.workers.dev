@@ -37,7 +37,7 @@ export const route = createRoute({
 
 // Handler
 export const handler = async (c: Context<{ Bindings: Env }>) => {
-	const query = c.req.valid("query");
+	const query = (c.req.valid as (target: string) => { page: number; creator?: string; creator_url?: string })("query");
 	const { creator, creator_url } = query;
 	const page = isNaN(query.page) ? 0 : query.page;
 	const pageSize = 50;

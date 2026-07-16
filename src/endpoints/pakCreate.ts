@@ -50,7 +50,7 @@ export const route = createRoute({
 
 // Handler
 export const handler = async (c: Context<{ Bindings: Env }>) => {
-	const input = c.req.valid("json") as Record<string, unknown>;
+	const input = (c.req.valid as (target: string) => Record<string, unknown>)("json");
 	const payload = JSON.stringify(input);
 
 	// Reject oversized payloads before hitting D1's ~1MB bind limit

@@ -59,8 +59,8 @@ export const route = createRoute({
 
 // Handler
 export const handler = async (c: Context<{ Bindings: Env }>) => {
-	const { hash } = c.req.valid("param") as { hash: string };
-	const { file_hash } = c.req.valid("json") as { file_hash: string };
+	const { hash } = (c.req.valid as (target: string) => { hash: string })("param");
+	const { file_hash } = (c.req.valid as (target: string) => { file_hash: string })("json");
 
 	// Verify pak exists
 	const pak = await c.env.DB.prepare(

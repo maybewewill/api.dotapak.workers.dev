@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { parsePak, getFileInfo } from "../types";
 import { hashIP } from "../hash";
 
+const TG_API = "https://api.telegram.org";
 const RATE_LIMIT_SECONDS = 15;
 
 // Route definition
@@ -10,7 +11,7 @@ export const route = createRoute({
 	method: "post",
 	path: "/api/paks/:hash/download",
 	tags: ["Paks"],
-	summary: "Increment download count for a Pak",
+	summary: "Download a Pak — JSON if no file attached, binary file otherwise",
 	request: {
 		params: z.object({
 			hash: z.string().regex(/^[a-f0-9]{32}$/).describe("Pak hash (32 hex chars)"),
@@ -18,7 +19,7 @@ export const route = createRoute({
 	},
 	responses: {
 		"200": {
-			description: "Returns the pak with updated downloads",
+			description: "If pak has no file — JSON. If attached file — binary download.",
 			content: {
 				"application/json": {
 					schema: z.object({
@@ -27,6 +28,20 @@ export const route = createRoute({
 							hash: z.string(),
 							downloads: z.number().int(),
 						}).passthrough(),
+					}),
+				},
+				"application/octet-stream": {
+					schema: z.any(),
+				},
+			},
+		},
+		"400": {
+			description: "Bad request (missing IP)",
+			content: {
+				"application/json": {
+					schema: z.object({
+						success: z.boolean(),
+						error: z.string(),
 					}),
 				},
 			},
@@ -59,7 +74,7 @@ export const route = createRoute({
 
 // Handler
 export const handler = async (c: Context<{ Bindings: Env }>) => {
-	const { hash } = c.req.valid("param") as { hash: string };
+	const { hash } = (c.req.valid as (target: string) => { hash: string })("param");
 
 	// Verify pak exists
 	const row = await c.env.DB.prepare(
@@ -120,6 +135,53 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 			.bind(now - 60).run().catch(() => {}),
 	);
 
+	// ── If a file is attached, proxy it from Telegram ──
+	if (row.file_hash) {
+		const fileRow = await c.env.DB.prepare(
+			"SELECT telegram_file_id, file_name, mime_type FROM files WHERE hash = ?",
+		).bind(row.file_hash).first<{ telegram_file_id: string; file_name: string; mime_type: string }>();
+
+		if (fileRow) {
+			try {
+				const botToken = (c.env as any).BOT_TOKEN as string;
+
+				// Get download path from Telegram API
+				const fileRes = await fetch(
+					`${TG_API}/bot${botToken}/getFile?file_id=${fileRow.telegram_file_id}`,
+				);
+				const fileData: { ok: boolean; result?: { file_path: string } } = await fileRes.json();
+
+				if (!fileData.ok || !fileData.result?.file_path) {
+					return c.json({ success: false, error: "File unavailable on Telegram" }, 502);
+				}
+
+				// Stream the file from Telegram through us
+				const tgResponse = await fetch(
+					`${TG_API}/file/bot${botToken}/${fileData.result.file_path}`,
+				);
+
+				// Forward with correct headers for download
+				const responseHeaders = new Headers(tgResponse.headers);
+				responseHeaders.set(
+					"Content-Disposition",
+					`attachment; filename="${fileRow.file_name}"`,
+				);
+				responseHeaders.set("Content-Type", fileRow.mime_type || "application/octet-stream");
+				responseHeaders.set("X-Pak-Hash", hash);
+				responseHeaders.set("X-Pak-Downloads", String(row.downloads + 1));
+
+				return new Response(tgResponse.body, {
+					status: 200,
+					headers: responseHeaders,
+				});
+			} catch {
+				return c.json({ success: false, error: "Failed to proxy file" }, 502);
+			}
+		}
+		// file_hash set but no files row — fall through to JSON
+	}
+
+	// ── No file attached → return JSON ──
 	const pak: Record<string, unknown> = {
 		...parsePak({
 			...row,
@@ -127,7 +189,6 @@ export const handler = async (c: Context<{ Bindings: Env }>) => {
 		} as { hash: string; data: string; downloads: number }),
 	};
 
-	// Include file info if attached
 	if (row.file_hash) {
 		const fileInfo = await getFileInfo(c.env.DB, row.file_hash);
 		if (fileInfo) pak.file = fileInfo;

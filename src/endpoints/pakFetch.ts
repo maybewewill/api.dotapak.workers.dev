@@ -33,7 +33,7 @@ export const route = createRoute({
 
 // Handler
 export const handler = async (c: Context<{ Bindings: Env }>) => {
-	const { hash } = c.req.valid("param") as { hash: string };
+	const { hash } = (c.req.valid as (target: string) => { hash: string })("param");
 
 	const row = await c.env.DB.prepare(
 		"SELECT hash, data, downloads, file_hash FROM paks WHERE hash = ?",
